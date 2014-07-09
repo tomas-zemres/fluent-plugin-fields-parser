@@ -92,7 +92,7 @@ Configuration
 
 For input like:
 ```
-{ "message": "data black:54 white=55 red=10"}
+{ "message": "data black:54 white:55 red:10"}
 ```
 
 it returns:
@@ -114,6 +114,6 @@ You cat add and/or remove tag prefix using Configuration parameters
         add_tag_prefix      parsed
     </match>
 
-It it matched tag "raw.some.record", then it emits tag "parsed.some.record".
+If it matched tag "raw.some.record", then it emits tag "parsed.some.record".
 
 
