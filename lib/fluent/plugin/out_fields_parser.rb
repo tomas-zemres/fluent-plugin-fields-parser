@@ -1,3 +1,5 @@
+require "logfmt"
+
 module Fluent
   class OutputFieldsParser < Fluent::Output
     Fluent::Plugin.register_output('fields_parser', self)
@@ -7,16 +9,20 @@ module Fluent
     config_param :parse_key,          :string, :default => 'message'
     config_param :fields_key,         :string, :default => nil
     config_param :pattern,            :string,
-                 :default => %{([a-zA-Z_]\\w*)=((['"]).*?(\\3)|[\\w.@$%/+-]*)}
+                 :default => nil # %{([a-zA-Z_]\\w*)=((['"]).*?(\\3)|[\\w.@$%/+-]*)}
 
     def compiled_pattern
+      if pattern == nil
+        return nil
+      end
+
       @compiled_pattern ||= Regexp.new(pattern)
     end
 
     def emit(tag, es, chain)
       tag = update_tag(tag)
       es.each { |time, record|
-        Engine.emit(tag, time, parse_fields(record))
+        Engine.emit(tag, time, parse_fields(record, pattern != nil))
       }
       chain.next
     end
@@ -35,19 +41,27 @@ module Fluent
       return tag
     end
 
-    def parse_fields(record)
+    def parse_fields(record, custom_pattern)
       source = record[parse_key].to_s
       target = fields_key ? (record[fields_key] ||= {}) : record
 
-      source.scan(compiled_pattern) do |match|
-        (key, value, begining_quote, ending_quote) = match
-        next if key.nil?
-        next if target.has_key?(key)
-        value = value.to_s
-        from_pos = begining_quote.to_s.length
-        to_pos = value.length - ending_quote.to_s.length - 1
-        target[key] = value[from_pos..to_pos]
+      if custom_pattern
+        source.scan(compiled_pattern) do |match|
+          (key, value, begining_quote, ending_quote) = match
+          next if key.nil?
+          next if target.has_key?(key)
+          value = value.to_s
+          from_pos = begining_quote.to_s.length
+          to_pos = value.length - ending_quote.to_s.length - 1
+          target[key] = value[from_pos..to_pos]
+        end
+
+      else
+        # Use logfmt to parse it (key=value)
+        parsed = Logfmt.parse(source)
+        target.merge!(parsed)
       end
+
       return record
     end
   end
