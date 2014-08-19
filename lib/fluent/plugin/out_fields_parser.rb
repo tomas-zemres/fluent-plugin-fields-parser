@@ -9,20 +9,17 @@ module Fluent
     config_param :parse_key,          :string, :default => 'message'
     config_param :fields_key,         :string, :default => nil
     config_param :pattern,            :string,
-                 :default => nil # %{([a-zA-Z_]\\w*)=((['"]).*?(\\3)|[\\w.@$%/+-]*)}
+                 :default => %{([a-zA-Z_]\\w*)=((['"]).*?(\\3)|[\\w.@$%/+-]*)}
+    config_param :strict_key_value,  :bool, :default => false
 
     def compiled_pattern
-      if pattern == nil
-        return nil
-      end
-
       @compiled_pattern ||= Regexp.new(pattern)
     end
 
     def emit(tag, es, chain)
       tag = update_tag(tag)
       es.each { |time, record|
-        Engine.emit(tag, time, parse_fields(record, pattern != nil))
+        Engine.emit(tag, time, parse_fields(record))
       }
       chain.next
     end
@@ -41,11 +38,15 @@ module Fluent
       return tag
     end
 
-    def parse_fields(record, custom_pattern)
+    def parse_fields(record)
       source = record[parse_key].to_s
       target = fields_key ? (record[fields_key] ||= {}) : record
 
-      if custom_pattern
+      if strict_key_value
+        # Use logfmt to parse it (key=value)
+        parsed = Logfmt.parse(source)
+        target.merge!(parsed)
+      else
         source.scan(compiled_pattern) do |match|
           (key, value, begining_quote, ending_quote) = match
           next if key.nil?
@@ -55,11 +56,6 @@ module Fluent
           to_pos = value.length - ending_quote.to_s.length - 1
           target[key] = value[from_pos..to_pos]
         end
-
-      else
-        # Use logfmt to parse it (key=value)
-        parsed = Logfmt.parse(source)
-        target.merge!(parsed)
       end
 
       return record
