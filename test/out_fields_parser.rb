@@ -231,4 +231,40 @@ class FieldsParserOutputTest < Test::Unit::TestCase
       emits[1][2]
     )
   end
+
+def test_strict_key_value
+  d = create_driver("strict_key_value true")
+
+  orig_message = %{msg="Audit log" user=Johnny action="add-user" dontignore=don't-ignore-this result=success iVal=23 fVal=1.02 bVal=true}
+  d.run do
+    d.emit({'message' => orig_message})
+    d.emit({'message' => 'a'})
+  end
+
+  emits = d.emits
+  assert_equal 2, emits.size
+  assert_equal "orig.test.tag", emits[0][0]
+  assert_equal(
+    {
+      'message' => orig_message,
+      "msg"=>"Audit log",
+      'user' => "Johnny",
+      'action' => 'add-user',
+      'dontignore' => "don't-ignore-this",
+      'result' => 'success',
+      'iVal' => 23,
+      'fVal' => 1.02,
+      'bVal' => "true"
+    },
+    emits[0][2]
+  )
+  assert_equal(
+    {
+      'message' => 'a',
+    },
+    emits[1][2]
+  )
+end
+
+
 end

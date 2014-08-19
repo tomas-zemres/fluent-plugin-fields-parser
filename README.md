@@ -17,6 +17,8 @@ Use RubyGems:
 
         remove_tag_prefix   raw
         add_tag_prefix      parsed
+
+        strict_key_value     false
     </match>
 
 If following record is passed:
@@ -25,7 +27,7 @@ If following record is passed:
 {"message": "Audit log user=Johny action='add-user' result=success" }
 ```
 
-then you got new record:
+then you will get a new record:
 
 ```
 {
@@ -116,4 +118,39 @@ You cat add and/or remove tag prefix using Configuration parameters
 
 If it matched tag "raw.some.record", then it emits tag "parsed.some.record".
 
+### Parameter strict_key_value
 
+```
+    <match pattern>
+        type                fields_parser
+        strict_key_value   true
+    </match>
+```
+
+If `strict_key_value` is set to `true`, the parser will use the [ruby logfmt
+parser](https://github.com/cyberdelia/logfmt-ruby) which will parse the log
+message based on the popular [logfmt](https://brandur.org/logfmt) key/value
+format.  Do note that this parser will create Fixnum and Float type values
+when it parses integer and float values.
+
+All information provided in the log message must be in a strict key=value
+format.  For example, if following record is passed:
+
+```
+{"message": "msg=\"Audit log\" user=Johnny action=\"add-user\" result=success iVal=23 fVal=1.02 bVal=true" }
+```
+
+then you will get a new record:
+
+```
+{
+    "message": "msg=\"Audit log\" user=Johnny action=\"add-user\" result=success iVal=23 fVal=1.02 bVal=true",
+    "msg": "Audit log",
+    "user": "Johnny",
+    "action": "add-user",
+    "result": "success",
+    "iVal": 23,
+    "fVal": 1.02,
+    "bVal": "true"
+}
+```

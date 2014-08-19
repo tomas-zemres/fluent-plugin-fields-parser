@@ -18,5 +18,7 @@ Gem::Specification.new do |gem|
   gem.require_paths = ['lib']
 
   gem.add_dependency "fluentd"
+  gem.add_dependency "logfmt"
   gem.add_development_dependency "rake"
 end
+
