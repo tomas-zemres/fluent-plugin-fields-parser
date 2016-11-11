@@ -19,7 +19,7 @@ module Fluent
     def emit(tag, es, chain)
       tag = update_tag(tag)
       es.each { |time, record|
-        Engine.emit(tag, time, parse_fields(record))
+        router.emit(tag, time, parse_fields(record))
       }
       chain.next
     end
