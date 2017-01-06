@@ -1,5 +1,5 @@
-fluent-plugin-fields-parser
-===========================
+# fluent-plugin-fields-parser
+[![Build Status](https://travis-ci.org/tomas-zemres/fluent-plugin-fields-parser.png)](https://travis-ci.org/tomas-zemres/fluent-plugin-fields-parser)
 
 Fluent output filter plugin for parsing key/value fields in records
 based on &lt;key>=&lt;value> pattern.
