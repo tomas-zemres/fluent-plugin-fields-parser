@@ -20,5 +20,6 @@ Gem::Specification.new do |gem|
   gem.add_dependency "fluentd", '>= 0.14.0'
   gem.add_dependency "logfmt"
   gem.add_development_dependency "rake"
+  gem.add_development_dependency 'test-unit'
 end
 
