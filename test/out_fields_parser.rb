@@ -104,7 +104,7 @@ class FieldsParserOutputTest < Test::Unit::TestCase
     })
 
     d.run do
-      d.emit({ message => 'abc' })
+      d.emit({ 'message' => 'abc' })
     end
 
     emits = d.emits
@@ -117,7 +117,7 @@ class FieldsParserOutputTest < Test::Unit::TestCase
     }, tag=nil)
 
     d.run do
-      d.emit({ message => 'abc' })
+      d.emit({ 'message' => 'abc' })
     end
 
     emits = d.emits
@@ -130,7 +130,7 @@ class FieldsParserOutputTest < Test::Unit::TestCase
     }, tag='original')
 
     d.run do
-      d.emit({ message => 'abc' })
+      d.emit({ 'message' => 'abc' })
     end
 
     emits = d.emits
@@ -143,7 +143,7 @@ class FieldsParserOutputTest < Test::Unit::TestCase
     }, tag='orig')
 
     d.run do
-      d.emit({ message => 'abc' })
+      d.emit({ 'message' => 'abc' })
     end
 
     emits = d.emits
@@ -232,39 +232,38 @@ class FieldsParserOutputTest < Test::Unit::TestCase
     )
   end
 
-def test_strict_key_value
-  d = create_driver("strict_key_value true")
+  def test_strict_key_value
+    d = create_driver("strict_key_value true")
 
-  orig_message = %{msg="Audit log" user=Johnny action="add-user" dontignore=don't-ignore-this result=success iVal=23 fVal=1.02 bVal=true}
-  d.run do
-    d.emit({'message' => orig_message})
-    d.emit({'message' => 'a'})
+    orig_message = %{msg="Audit log" user=Johnny action="add-user" dontignore=don't-ignore-this result=success iVal=23 fVal=1.02 bVal=true}
+    d.run do
+      d.emit({'message' => orig_message})
+      d.emit({'message' => 'a'})
+    end
+
+    emits = d.emits
+    assert_equal 2, emits.size
+    assert_equal "orig.test.tag", emits[0][0]
+    assert_equal(
+      {
+        'message' => orig_message,
+        "msg"=>"Audit log",
+        'user' => "Johnny",
+        'action' => 'add-user',
+        'dontignore' => "don't-ignore-this",
+        'result' => 'success',
+        'iVal' => 23,
+        'fVal' => 1.02,
+        'bVal' => "true"
+      },
+      emits[0][2]
+    )
+    assert_equal(
+      {
+        'message' => 'a',
+      },
+      emits[1][2]
+    )
   end
-
-  emits = d.emits
-  assert_equal 2, emits.size
-  assert_equal "orig.test.tag", emits[0][0]
-  assert_equal(
-    {
-      'message' => orig_message,
-      "msg"=>"Audit log",
-      'user' => "Johnny",
-      'action' => 'add-user',
-      'dontignore' => "don't-ignore-this",
-      'result' => 'success',
-      'iVal' => 23,
-      'fVal' => 1.02,
-      'bVal' => "true"
-    },
-    emits[0][2]
-  )
-  assert_equal(
-    {
-      'message' => 'a',
-    },
-    emits[1][2]
-  )
-end
-
 
 end
