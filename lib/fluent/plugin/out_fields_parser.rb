@@ -1,8 +1,11 @@
 require "logfmt"
+require "fluent/plugin/output"
 
-module Fluent
-  class OutputFieldsParser < Fluent::Output
+module Fluent::Plugin
+  class OutputFieldsParser < Output
     Fluent::Plugin.register_output('fields_parser', self)
+
+    helpers :event_emitter
 
     config_param :remove_tag_prefix,  :string, :default => nil
     config_param :add_tag_prefix,     :string, :default => nil
@@ -16,12 +19,11 @@ module Fluent
       @compiled_pattern ||= Regexp.new(pattern)
     end
 
-    def emit(tag, es, chain)
+    def process(tag, es)
       tag = update_tag(tag)
       es.each { |time, record|
         router.emit(tag, time, parse_fields(record))
       }
-      chain.next
     end
 
     def update_tag(tag)

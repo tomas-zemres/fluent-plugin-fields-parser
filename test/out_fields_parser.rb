@@ -1,4 +1,5 @@
 require 'fluent/test'
+require 'fluent/test/driver/output'
 require 'fluent/plugin/out_fields_parser'
 
 class FieldsParserOutputTest < Test::Unit::TestCase
@@ -6,24 +7,24 @@ class FieldsParserOutputTest < Test::Unit::TestCase
     Fluent::Test.setup
   end
 
-  def create_driver(conf='', tag='orig.test.tag')
-    Fluent::Test::OutputTestDriver.new(Fluent::OutputFieldsParser, tag).configure(conf)
+  def create_driver(conf='')
+    Fluent::Test::Driver::Output.new(Fluent::Plugin::OutputFieldsParser).configure(conf)
   end
 
   def test_config_defaults
     d = create_driver()
 
     orig_message = %{parse this num=-56.7 tok=abc%25 null=}
-    d.run do
-      d.emit({
+    d.run(default_tag: 'orig.test.tag') do
+      d.feed({
         'message' => orig_message,
         'other_key' => %{ test2 a=b },
       })
     end
 
-    emits = d.emits
-    assert_equal 1, emits.size
-    assert_equal "orig.test.tag", emits[0][0]
+    events = d.events
+    assert_equal 1, events.size
+    assert_equal "orig.test.tag", events[0][0]
     assert_equal(
       {
         'message' => orig_message,
@@ -32,7 +33,7 @@ class FieldsParserOutputTest < Test::Unit::TestCase
         'tok' => 'abc%25',
         'null' => '',
       },
-      emits[0][2]
+      events[0][2]
     )
   end
 
@@ -40,15 +41,15 @@ class FieldsParserOutputTest < Test::Unit::TestCase
     d = create_driver()
 
     orig_message = %{blax dq="asd ' asd +3" sq='as " s " 4' s=yu 6}
-    d.run do
-      d.emit({
+    d.run(default_tag: 'orig.test.tag') do
+      d.feed({
         'message' => orig_message,
       })
     end
 
-    emits = d.emits
-    assert_equal 1, emits.size
-    assert_equal "orig.test.tag", emits[0][0]
+    events = d.events
+    assert_equal 1, events.size
+    assert_equal "orig.test.tag", events[0][0]
     assert_equal(
       {
         'message' => orig_message,
@@ -56,23 +57,23 @@ class FieldsParserOutputTest < Test::Unit::TestCase
         'sq' => 'as " s " 4',
         's' => 'yu'
       },
-      emits[0][2]
+      events[0][2]
     )
   end
 
   def test_parsed_key_is_missing
     d = create_driver()
 
-    d.run do
-      d.emit({})
+    d.run(default_tag: 'orig.test.tag') do
+      d.feed({})
     end
 
-    emits = d.emits
-    assert_equal 1, emits.size
-    assert_equal "orig.test.tag", emits[0][0]
+    events = d.events
+    assert_equal 1, events.size
+    assert_equal "orig.test.tag", events[0][0]
     assert_equal(
       {},
-      emits[0][2]
+      events[0][2]
     )
   end
 
@@ -80,20 +81,20 @@ class FieldsParserOutputTest < Test::Unit::TestCase
     d = create_driver()
 
     orig_message = %{mock a=77 message=blax a=999 e=5}
-    d.run do
-      d.emit({'message' => orig_message, 'e' => nil })
+    d.run(default_tag: 'orig.test.tag') do
+      d.feed({'message' => orig_message, 'e' => nil })
     end
 
-    emits = d.emits
-    assert_equal 1, emits.size
-    assert_equal "orig.test.tag", emits[0][0]
+    events = d.events
+    assert_equal 1, events.size
+    assert_equal "orig.test.tag", events[0][0]
     assert_equal(
       {
         'message' => orig_message,
         'a' => '77',
         'e' => nil,
       },
-      emits[0][2]
+      events[0][2]
     )
   end
 
@@ -103,80 +104,80 @@ class FieldsParserOutputTest < Test::Unit::TestCase
       add_tag_prefix      new
     })
 
-    d.run do
-      d.emit({ 'message' => 'abc' })
+    d.run(default_tag: 'orig.test.tag') do
+      d.feed({ 'message' => 'abc' })
     end
 
-    emits = d.emits
-    assert_equal 1, emits.size
-    assert_equal "new.test.tag", emits[0][0]
+    events = d.events
+    assert_equal 1, events.size
+    assert_equal "new.test.tag", events[0][0]
 
     d = create_driver(%{
       remove_tag_prefix   orig
       add_tag_prefix      new
-    }, tag=nil)
+    })
 
-    d.run do
-      d.emit({ 'message' => 'abc' })
+    d.run(default_tag: '') do
+      d.feed({ 'message' => 'abc' })
     end
 
-    emits = d.emits
-    assert_equal 1, emits.size
-    assert_equal "new", emits[0][0]
+    events = d.events
+    assert_equal 1, events.size
+    assert_equal "new", events[0][0]
 
     d = create_driver(%{
       remove_tag_prefix   orig
       add_tag_prefix      new
-    }, tag='original')
+    })
 
-    d.run do
-      d.emit({ 'message' => 'abc' })
+    d.run(default_tag: 'original') do
+      d.feed({ 'message' => 'abc' })
     end
 
-    emits = d.emits
-    assert_equal 1, emits.size
-    assert_equal "new.original", emits[0][0]
+    events = d.events
+    assert_equal 1, events.size
+    assert_equal "new.original", events[0][0]
 
     d = create_driver(%{
       remove_tag_prefix   orig
       add_tag_prefix      new
-    }, tag='orig')
+    })
 
-    d.run do
-      d.emit({ 'message' => 'abc' })
+    d.run(default_tag: 'orig') do
+      d.feed({ 'message' => 'abc' })
     end
 
-    emits = d.emits
-    assert_equal 1, emits.size
-    assert_equal "new", emits[0][0]
+    events = d.events
+    assert_equal 1, events.size
+    assert_equal "new", events[0][0]
   end
 
   def test_parse_key
     d = create_driver('parse_key  custom_key')
 
-    d.run do
-      d.emit({
+    d.run(default_tag: 'orig.test.tag') do
+      d.feed({
         'message' => %{ test2 c=d },
         'custom_key' => %{ test2 a=b },
       })
-      d.emit({})
+      d.feed({})
     end
 
-    emits = d.emits
-    assert_equal 2, emits.size
-    assert_equal "orig.test.tag", emits[0][0]
+    events = d.events
+    assert_equal 2, events.size
+    assert_equal "orig.test.tag", events[0][0]
     assert_equal(
       {
         'message' => %{ test2 c=d },
         'custom_key' => %{ test2 a=b },
         'a' => 'b'
       },
-      emits[0][2]
+      events[0][2]
     )
     assert_equal(
       {
       },
-      emits[1][2]
+      events[1][2]
     )
   end
 
@@ -184,13 +185,13 @@ class FieldsParserOutputTest < Test::Unit::TestCase
     d = create_driver("fields_key output-key")
 
     orig_message = %{parse this num=-56.7 tok=abc%25 message=a+b}
-    d.run do
-      d.emit({'message' => orig_message})
+    d.run(default_tag: 'orig.test.tag') do
+      d.feed({'message' => orig_message})
     end
 
-    emits = d.emits
-    assert_equal 1, emits.size
-    assert_equal "orig.test.tag", emits[0][0]
+    events = d.events
+    assert_equal 1, events.size
+    assert_equal "orig.test.tag", events[0][0]
     assert_equal(
       {
         'message' => orig_message,
@@ -200,7 +201,7 @@ class FieldsParserOutputTest < Test::Unit::TestCase
           'message' => 'a+b',
         }
       },
-      emits[0][2]
+      events[0][2]
     )
   end
 
@@ -208,27 +209,27 @@ class FieldsParserOutputTest < Test::Unit::TestCase
     d = create_driver("pattern (\\w+):(\\d+)")
 
     orig_message = %{parse this a:44 b:ignore-this h=7 bbb:999}
-    d.run do
-      d.emit({'message' => orig_message})
-      d.emit({'message' => 'a'})
+    d.run(default_tag: 'orig.test.tag') do
+      d.feed({'message' => orig_message})
+      d.feed({'message' => 'a'})
     end
 
-    emits = d.emits
-    assert_equal 2, emits.size
-    assert_equal "orig.test.tag", emits[0][0]
+    events = d.events
+    assert_equal 2, events.size
+    assert_equal "orig.test.tag", events[0][0]
     assert_equal(
       {
         'message' => orig_message,
         'a' => '44',
         'bbb' => '999',
       },
-      emits[0][2]
+      events[0][2]
     )
     assert_equal(
       {
         'message' => 'a',
       },
-      emits[1][2]
+      events[1][2]
     )
   end
 
@@ -236,14 +237,14 @@ class FieldsParserOutputTest < Test::Unit::TestCase
     d = create_driver("strict_key_value true")
 
     orig_message = %{msg="Audit log" user=Johnny action="add-user" dontignore=don't-ignore-this result=success iVal=23 fVal=1.02 bVal=true}
-    d.run do
-      d.emit({'message' => orig_message})
-      d.emit({'message' => 'a'})
+    d.run(default_tag: 'orig.test.tag') do
+      d.feed({'message' => orig_message})
+      d.feed({'message' => 'a'})
     end
 
-    emits = d.emits
-    assert_equal 2, emits.size
-    assert_equal "orig.test.tag", emits[0][0]
+    events = d.events
+    assert_equal 2, events.size
+    assert_equal "orig.test.tag", events[0][0]
     assert_equal(
       {
         'message' => orig_message,
@@ -256,13 +257,13 @@ class FieldsParserOutputTest < Test::Unit::TestCase
         'fVal' => 1.02,
         'bVal' => "true"
       },
-      emits[0][2]
+      events[0][2]
     )
     assert_equal(
       {
         'message' => 'a',
       },
-      emits[1][2]
+      events[1][2]
     )
   end
 
